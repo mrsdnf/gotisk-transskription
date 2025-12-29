@@ -208,6 +208,7 @@ ABSOLUTTE REGLER:
 4. Bevar ALLE historiske stavemåder NØJAGTIGT - modernisér IKKE
 5. Ligaturer (ch, ck, ff, fi, fl, ll, si, sk, sl, ss, st, sz) → bevar som separate bogstaver
 6. Bevar æ, ø, å (eller aa i historiske tekster)
+7. Bemærk: Mange bogstaver findes i flere varianter (elegante, dekorative, eller position-baserede former). Transskribér til samme moderne bogstav uanset variant.
 
 BEVAR HISTORISK STAVNING (eksempler):
 - "hafde" → IKKE "havde"
@@ -245,6 +246,7 @@ ABSOLUTTE REGLER:
 4. Bevar ALLE historiske stavemåder NØJAGTIGT - modernisér IKKE
 5. Ligaturer (ch, ck, ff, fi, fl, ll, si, sk, sl, ss, st, sz) → bevar som separate bogstaver
 6. Bevar æ, ø, å (eller aa i historiske tekster)
+7. Bemærk: Mange bogstaver findes i flere varianter (elegante, dekorative, eller position-baserede former). Transskribér til samme moderne bogstav uanset variant.
 
 VERIFICEREDE ORD FRA HISTORISKE DOKUMENTER (Kong Christian den Fierdes Historie):
 Disse ord er bekræftet fra 1600-tals tekster. Brug dem som VEJLEDNING for korrekt stavning, men TVING IKKE dem ind hvis teksten viser noget andet.
