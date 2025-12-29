@@ -207,6 +207,28 @@ git push
 
 ---
 
+## 🔐 API Keys & Konfiguration
+
+### Hvor er API-nøglerne?
+Alle API-nøgler er gemt sikkert i:
+- **Fil**: `API_KEYS_PRIVATE.md` (i samme mappe)
+- **Status**: Beskyttet via .gitignore (committes ALDRIG til GitHub)
+
+### Nøgler der skal bruges:
+1. **Claude API Key** - Påkrævet for transskription
+2. **Supabase URL** - Valgfri (fallback til localStorage)
+3. **Supabase Anon Key** - Valgfri (fallback til localStorage)
+
+### I en ny chat:
+```
+Læs API_KEYS_PRIVATE.md for at få adgang til konfiguration
+```
+
+### Bruger-side konfiguration:
+Brugere skal indtaste deres egne nøgler via settings-modal i appen (gemmes i browser localStorage).
+
+---
+
 ## 🔧 Kritiske Kode-Sektioner
 
 ### app.js - Hovedfiler

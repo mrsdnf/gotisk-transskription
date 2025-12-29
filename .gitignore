@@ -1,2 +1,9 @@
 # Local Netlify folder
 .netlify
+
+# API Keys - SKAL ALDRIG COMMITTES!
+API_KEYS_PRIVATE.md
+*_PRIVATE.md
+*.secret
+.env
+.env.local
