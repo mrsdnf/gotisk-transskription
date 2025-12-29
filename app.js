@@ -124,13 +124,79 @@ function setupEventListeners() {
 function handleFileSelect(file) {
     currentFile = file;
 
-    // Show preview
+    // Check file size and compress if needed
+    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+
+    if (file.size > maxSize) {
+        console.log(`File size (${(file.size / 1024 / 1024).toFixed(2)}MB) exceeds 5MB. Compressing...`);
+        compressImage(file);
+    } else {
+        loadImage(file);
+    }
+}
+
+function loadImage(file) {
     const reader = new FileReader();
     reader.onload = (e) => {
         currentImageData = e.target.result;
         previewImage.src = currentImageData;
         previewSection.style.display = 'block';
         transcribeBtn.disabled = false;
+    };
+    reader.readAsDataURL(file);
+}
+
+function compressImage(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+            // Create canvas for compression
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            // Calculate new dimensions (max 4000px on longest side for quality)
+            let width = img.width;
+            let height = img.height;
+            const maxDimension = 4000;
+
+            if (width > maxDimension || height > maxDimension) {
+                if (width > height) {
+                    height = (height / width) * maxDimension;
+                    width = maxDimension;
+                } else {
+                    width = (width / height) * maxDimension;
+                    height = maxDimension;
+                }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+
+            // Draw and compress
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Try different quality levels until under 5MB
+            let quality = 0.9;
+            let compressedDataUrl;
+
+            do {
+                compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                const compressedSize = (compressedDataUrl.length * 3) / 4; // Approximate size
+
+                if (compressedSize < 5 * 1024 * 1024) break;
+                quality -= 0.1;
+            } while (quality > 0.3);
+
+            console.log(`Compressed to quality ${quality.toFixed(1)}, new size: ~${((compressedDataUrl.length * 3) / 4 / 1024 / 1024).toFixed(2)}MB`);
+
+            // Use compressed image
+            currentImageData = compressedDataUrl;
+            previewImage.src = compressedDataUrl;
+            previewSection.style.display = 'block';
+            transcribeBtn.disabled = false;
+        };
+        img.src = e.target.result;
     };
     reader.readAsDataURL(file);
 }
