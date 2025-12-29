@@ -282,6 +282,29 @@ ${GOTHIC_TRAINING_DATA.phrases.map(p => `- "${p}"`).join('\n')}
 MARGINALNOTER (almindelige mønstre):
 ${GOTHIC_TRAINING_DATA.marginalNotes.map(p => `- "${p}"`).join('\n')}
 
+SJÆLDNE OG KOMPLEKSE ORD (fra verificerede oversættelser):
+Disse ord er særligt udfordrende og kommer fra professionelle oversættelser af originale 1600-tals manuskripter:
+${GOTHIC_TRAINING_DATA.rareWords.join(', ')}
+
+EKSEMPEL-SÆTNINGER (few-shot learning fra verificerede parallel-tekster):
+Her er komplette sætninger fra originale 1600-tals dokumenter som reference for korrekt transskription:
+
+1. "${GOTHIC_TRAINING_DATA.exampleSentences[0]}"
+
+2. "${GOTHIC_TRAINING_DATA.exampleSentences[1]}"
+
+3. "${GOTHIC_TRAINING_DATA.exampleSentences[2]}"
+
+4. "${GOTHIC_TRAINING_DATA.exampleSentences[3]}"
+
+5. "${GOTHIC_TRAINING_DATA.exampleSentences[4]}"
+
+Bemærk i eksemplerne:
+- Konsistent brug af historisk stavning (hafde, dend, hand, giorde, blef)
+- Langt s (ſ) konverteret til moderne s
+- Kompleks sætningsstruktur bevaret nøjagtigt
+- Rare og ældre ord transskriberet præcist uden modernisering
+
 FORMATTERING:
 - [HEADER: ...] for overskrifter
 - [PAGE: X] for sidenumre

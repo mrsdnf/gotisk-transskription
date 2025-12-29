@@ -105,5 +105,37 @@ const GOTHIC_TRAINING_DATA = {
   marginalNotes: [
     "Kongen", "Hertug", "Aar 1596", "Aar 1597", "Aar 1598",
     "Biskoppen", "Dronningen", "Gesandter", "Stockholms", "Prussiske"
+  ],
+
+  // Rare and complex words from verified translation (Slange Chr 4 part 2 0812)
+  // These words are particularly challenging and come from professional translation of pages 113-121
+  rareWords: [
+    "fremblinket", "høypriselige", "vederqvæget", "Vindskibelighed",
+    "Agtsomhed", "Fortrængte", "Sagtmodighed", "Forsiunlighed",
+    "Sparsommelighed", "Morgenrøden", "Diamanter", "Forsigtighed",
+    "Heroiske", "Miskundhed", "Forfængelighed", "Skiemt",
+    "Tidsfordrif", "Stadighed", "Alvorlighed", "smigrende",
+    "klafrende", "Bagvaskelse", "cronet", "Beskiermelse",
+    "Overmodige", "Huusholdning", "udkrævedes", "efterkommende",
+    "høytravende", "hykliske", "stadfæster", "Privilegier",
+    "Omhyggelighed", "Videnskaber", "indrettede", "Afdeelinger",
+    "Magelighed", "overhøre", "Samtaler", "deslige",
+    "brugelige", "Kiøbstædernes", "Forfremmelse", "Lagebetters",
+    "Lovgivers", "Bogtrykkeriet", "Pergament", "u-læselige",
+    "Munke-Skrift", "u-forstaaelige"
+  ],
+
+  // Complete sentence examples for few-shot learning (from verified parallel text)
+  // These demonstrate typical 1600s Danish with historical spelling, long s patterns, and complex grammar
+  exampleSentences: [
+    "Det Lys, som hidindtil hafde fremblinket af dend unge Konges høypriselige Dyder, gaf, ligesom Morgenrøden, tilkiende, hvor klar en Soel der nu ville opstaae og fremskinne.",
+
+    "Hand giorde ikke, som eendeel unge Printzer gierne giøre, at hand tog efter de smigrende og klafrende Tunges Snak og Bagvaskelse, som hand hafde hørt førend hand blef cronet; men hand udspurte og hørte hans klogeste og beste Raads Raad.",
+
+    "Hans Sværd bar hand udi Belte ved sin Siide hængendes udi Balgen med stor Sagtmodighed, og hand dertil blef tvungen: Men naar hand dette skulle giøre, da viiste hand udi Gierningen, at hand hafde Mood og Styrke til at føre det, som een retfærdig Konge, og som enn tapper Krigs-Helt.",
+
+    "Guld-Eblet bar hand saa varligen og holdte saa fast derpaa, at det aldrig trillede ham af Haanden, Forsiunlighed og Sparsommelighed at holde Haand over, at de ikke bleve brugte til andet, end til Fæderlandets Gafn og Nytte.",
+
+    "Dend gamle Norske Lov, som nu er baaren til Eders Kongelige Majestæt og som med Munke-Skrift paa Pargament er skrefvet; kunde ikke efter de Tiders Tilstand være bedre, retfærdigere og meere taallig, end dend var: Men Tidernes Forandring, Sprogets Ælde, og indfaldene Regierings Forvirring haver giort een stor Deel af dend u-brugelig."
   ]
 };
