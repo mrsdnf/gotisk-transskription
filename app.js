@@ -169,7 +169,7 @@ async function transcribeImage() {
                         },
                         {
                             type: 'text',
-                            text: getTranscriptionPrompt()
+                            text: getEnhancedTranscriptionPrompt()
                         }
                     ]
                 }]
@@ -197,6 +197,7 @@ async function transcribeImage() {
     }
 }
 
+// Original prompt function (kept as fallback)
 function getTranscriptionPrompt() {
     return `Du skal transskribere dette gotiske/fraktur dokument fra 1600-tallets dansk til moderne danske bogstaver.
 
@@ -225,6 +226,69 @@ FORMATTERING:
 - Bevar linjeskift som i originalen
 
 Transskribér NØJAGTIGT bogstav for bogstav. Ingen fortolkning, ingen modernisering.`;
+}
+
+// Enhanced prompt with training data (200+ verified words)
+function getEnhancedTranscriptionPrompt() {
+    // Fallback to basic prompt if training data is not available
+    if (typeof GOTHIC_TRAINING_DATA === 'undefined') {
+        console.warn('Training data not loaded, using basic prompt');
+        return getTranscriptionPrompt();
+    }
+
+    let prompt = `Du skal transskribere dette gotiske/fraktur dokument fra 1600-tallets dansk til moderne danske bogstaver.
+
+ABSOLUTTE REGLER:
+1. Langt s (ſ) → s (moderne s)
+2. Dobbelt langt s (ſſ) → ss
+3. s + langt s (sſ) → ss
+4. Bevar ALLE historiske stavemåder NØJAGTIGT - modernisér IKKE
+5. Ligaturer (ch, ck, ff, fi, fl, ll, si, sk, sl, ss, st, sz) → bevar som separate bogstaver
+6. Bevar æ, ø, å (eller aa i historiske tekster)
+
+VERIFICEREDE ORD FRA HISTORISKE DOKUMENTER (Kong Christian den Fierdes Historie):
+Disse ord er bekræftet fra 1600-tals tekster. Brug dem som VEJLEDNING for korrekt stavning, men TVING IKKE dem ind hvis teksten viser noget andet.
+
+Almindelige ord: ${GOTHIC_TRAINING_DATA.commonWords.join(', ')}
+
+Verber (bevar historisk stavning): ${GOTHIC_TRAINING_DATA.verbs.join(', ')}
+
+Substantiver: ${GOTHIC_TRAINING_DATA.nouns.join(', ')}
+
+Egennavne: ${GOTHIC_TRAINING_DATA.properNames.join(', ')}
+
+Adjektiver: ${GOTHIC_TRAINING_DATA.adjectives.join(', ')}
+
+Geografiske stednavne: ${GOTHIC_TRAINING_DATA.geographic.join(', ')}
+
+Titler og roller: ${GOTHIC_TRAINING_DATA.titles.join(', ')}
+
+Diplomatiske termer: ${GOTHIC_TRAINING_DATA.diplomaticTerms.join(', ')}
+
+LANGT S (ſ) MØNSTRE - EKSEMPLER FRA VERIFICEREDE TEKSTER:
+`;
+
+    // Add long s pattern examples
+    GOTHIC_TRAINING_DATA.longSPatterns.forEach(p => {
+        prompt += `- ${p.gothic} → ${p.modern}\n`;
+    });
+
+    prompt += `
+ALMINDELIGE FRASER I 1600-TALS TEKSTER:
+${GOTHIC_TRAINING_DATA.phrases.map(p => `- "${p}"`).join('\n')}
+
+MARGINALNOTER (almindelige mønstre):
+${GOTHIC_TRAINING_DATA.marginalNotes.map(p => `- "${p}"`).join('\n')}
+
+FORMATTERING:
+- [HEADER: ...] for overskrifter
+- [PAGE: X] for sidenumre
+- [SIDENOTE: ...] for marginalnoter
+- Bevar linjeskift som i originalen
+
+VIGTIGT: Transskribér NØJAGTIGT bogstav for bogstav hvad du SER i billedet. Brug de verificerede ord som VEJLEDNING til korrekt stavning, men hvis du ser noget der IKKE matcher ordlisten, så transskribér præcist hvad der står. Ingen fortolkning, ingen gætteri, ingen modernisering.`;
+
+    return prompt;
 }
 
 async function saveTranscription() {
