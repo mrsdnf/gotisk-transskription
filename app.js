@@ -201,6 +201,13 @@ async function transcribeImage() {
 function getTranscriptionPrompt() {
     return `Du skal transskribere dette gotiske/fraktur dokument fra 1600-tallets dansk til moderne danske bogstaver.
 
+KRITISK: Dette er en TRANSSKRIPTION, IKKE en oversættelse eller fortolkning!
+- Transskribér bogstav for bogstav hvad du SER
+- Omstrukturér IKKE teksten
+- Fortolk IKKE teksten
+- Modernisér IKKE stavning
+- Hvis du ikke kan genkende et bogstav: brug [?]
+
 ABSOLUTTE REGLER:
 1. Langt s (ſ) → s (moderne s)
 2. Dobbelt langt s (ſſ) → ss
@@ -209,6 +216,8 @@ ABSOLUTTE REGLER:
 5. Ligaturer (ch, ck, ff, fi, fl, ll, si, sk, sl, ss, st, sz) → bevar som separate bogstaver
 6. Bevar æ, ø, å (eller aa i historiske tekster)
 7. Bemærk: Mange bogstaver findes i flere varianter (elegante, dekorative, eller position-baserede former). Transskribér til samme moderne bogstav uanset variant.
+8. Ulæselige/uklare bogstaver: marker med [?]
+9. Dette er en 1:1 transskription - INGEN omformulering eller "rettelser"
 
 BEVAR HISTORISK STAVNING (eksempler):
 - "hafde" → IKKE "havde"
@@ -226,7 +235,14 @@ FORMATTERING:
 - [SIDENOTE: ...] for marginalnoter
 - Bevar linjeskift som i originalen
 
-Transskribér NØJAGTIGT bogstav for bogstav. Ingen fortolkning, ingen modernisering.`;
+KRITISKE PRINCIPPER:
+1. LÆS bogstav for bogstav - transskribér PRÆCIS hvad du ser
+2. Marker ulæselige bogstaver med [?] - gæt ALDRIG
+3. Bevar ALLE fejl, mærkelige stavemåder og uregelmæssigheder fra originalen
+4. Omstrukturér IKKE sætninger - bevar nøjagtig ordrækkefølge
+5. Dette er IKKE oversættelse - dette er karakter-for-karakter transskription
+
+HUSK: Din opgave er at være et præcist OCR-værktøj, ikke en intelligent oversætter. Kun konverter gotiske bogstaver til moderne ækvivalenter - ændre INTET andet.`;
 }
 
 // Enhanced prompt with training data (200+ verified words)
@@ -239,6 +255,13 @@ function getEnhancedTranscriptionPrompt() {
 
     let prompt = `Du skal transskribere dette gotiske/fraktur dokument fra 1600-tallets dansk til moderne danske bogstaver.
 
+KRITISK: Dette er en TRANSSKRIPTION, IKKE en oversættelse eller fortolkning!
+- Transskribér bogstav for bogstav hvad du SER
+- Omstrukturér IKKE teksten
+- Fortolk IKKE teksten
+- Modernisér IKKE stavning
+- Hvis du ikke kan genkende et bogstav: brug [?]
+
 ABSOLUTTE REGLER:
 1. Langt s (ſ) → s (moderne s)
 2. Dobbelt langt s (ſſ) → ss
@@ -247,6 +270,8 @@ ABSOLUTTE REGLER:
 5. Ligaturer (ch, ck, ff, fi, fl, ll, si, sk, sl, ss, st, sz) → bevar som separate bogstaver
 6. Bevar æ, ø, å (eller aa i historiske tekster)
 7. Bemærk: Mange bogstaver findes i flere varianter (elegante, dekorative, eller position-baserede former). Transskribér til samme moderne bogstav uanset variant.
+8. Ulæselige/uklare bogstaver: marker med [?]
+9. Dette er en 1:1 transskription - INGEN omformulering eller "rettelser"
 
 VERIFICEREDE ORD FRA HISTORISKE DOKUMENTER (Kong Christian den Fierdes Historie):
 Disse ord er bekræftet fra 1600-tals tekster. Brug dem som VEJLEDNING for korrekt stavning, men TVING IKKE dem ind hvis teksten viser noget andet.
@@ -311,7 +336,16 @@ FORMATTERING:
 - [SIDENOTE: ...] for marginalnoter
 - Bevar linjeskift som i originalen
 
-VIGTIGT: Transskribér NØJAGTIGT bogstav for bogstav hvad du SER i billedet. Brug de verificerede ord som VEJLEDNING til korrekt stavning, men hvis du ser noget der IKKE matcher ordlisten, så transskribér præcist hvad der står. Ingen fortolkning, ingen gætteri, ingen modernisering.`;
+KRITISKE PRINCIPPER FOR TRANSSKRIPTION:
+1. LÆS bogstav for bogstav - transskribér PRÆCIS hvad du ser
+2. Verificerede ord er kun VEJLEDNING - hvis teksten viser andet, følg teksten
+3. Marker ulæselige bogstaver med [?] - gæt ALDRIG
+4. Bevar ALLE fejl, mærkelige stavemåder og uregelmæssigheder fra originalen
+5. Omstrukturér IKKE sætninger - bevar nøjagtig ordrækkefølge
+6. Dette er IKKE oversættelse - dette er karakter-for-karakter transskription
+7. AI'en skal fungere som en nøjagtig SCANNER, ikke som en fortolker
+
+HUSK: Din opgave er at være et præcist OCR-værktøj, ikke en intelligent oversætter. Kun konverter gotiske bogstaver til moderne ækvivalenter - ændre INTET andet.`;
 
     return prompt;
 }
