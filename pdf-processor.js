@@ -2,15 +2,15 @@
  * PDF Batch Processor for Gothic Transcription App
  *
  * Processes large PDF documents by:
- * 1. Splitting each page into 4 overlapping horizontal sections (top → bottom)
+ * 1. Splitting each page into 8 overlapping horizontal sections (top → bottom)
  * 2. Transcribing each section via Claude Vision API
  * 3. Deduplicating overlapping text automatically via AI
  * 4. Merging sections with continuous line numbering
  * 5. Outputting Markdown (.md) and optionally Word (.docx)
  *
  * @author Claude Code
- * @version 1.0
- * @date 2025-12-29
+ * @version 1.1
+ * @date 2025-12-30
  */
 
 /**
@@ -24,56 +24,51 @@ function createOverlappingSections(canvas) {
   const width = canvas.width;
   const height = canvas.height;
 
-  // 4 HORISONTALE bånde fra TOP → BUND med 30% overlap
-  const sectionHeight = Math.floor(height * 0.65);  // Each section: 65% of page HEIGHT
-  const overlapHeight = Math.floor(height * 0.30);  // 30% overlap
+  // 8 HORISONTALE bånde fra TOP → BUND med 30% overlap (øget fra 4 til 8 for mindre filer)
+  const numSections = 8;
+  const sectionHeightPercent = 0.40;  // Each section: 40% of page height (reduced from 65%)
+  const overlapPercent = 0.30;        // 30% overlap maintained
 
-  const sections = [
-    {
-      index: 1,
-      x: 0,
-      y: 0,
-      width: width,           // FULL width
-      height: sectionHeight,  // 65% of page height
-      position: 'top',
-      overlapWithPrevious: false
-    },
-    {
-      index: 2,
-      x: 0,
-      y: sectionHeight - overlapHeight,  // Start with overlap
-      width: width,
-      height: sectionHeight,
-      position: 'mid-top',
-      overlapWithPrevious: true,
-      overlapPixels: overlapHeight
-    },
-    {
-      index: 3,
-      x: 0,
-      y: height - sectionHeight,  // Align to cover bottom
-      width: width,
-      height: sectionHeight,
-      position: 'mid-bottom',
-      overlapWithPrevious: true,
-      overlapPixels: overlapHeight
-    },
-    {
-      index: 4,
-      x: 0,
-      y: height - Math.floor(height * 0.35),  // Last 35% of page
-      width: width,
-      height: Math.floor(height * 0.35),
-      position: 'bottom',
-      overlapWithPrevious: true,
-      overlapPixels: overlapHeight
+  const sectionHeight = Math.floor(height * sectionHeightPercent);
+  const overlapHeight = Math.floor(height * overlapPercent);
+  const stepHeight = sectionHeight - overlapHeight;  // Non-overlapping portion
+
+  const sections = [];
+  const positions = ['top', 'section-2', 'section-3', 'section-4', 'section-5', 'section-6', 'section-7', 'bottom'];
+
+  for (let i = 0; i < numSections; i++) {
+    let yPos, sHeight;
+
+    if (i === 0) {
+      // First section: start from top
+      yPos = 0;
+      sHeight = sectionHeight;
+    } else if (i === numSections - 1) {
+      // Last section: end at bottom
+      yPos = height - sectionHeight;
+      sHeight = sectionHeight;
+    } else {
+      // Middle sections: evenly distributed with overlap
+      yPos = i * stepHeight;
+      sHeight = sectionHeight;
     }
-  ];
+
+    sections.push({
+      index: i + 1,
+      x: 0,
+      y: yPos,
+      width: width,
+      height: sHeight,
+      position: positions[i] || `section-${i + 1}`,
+      overlapWithPrevious: i > 0,
+      overlapPixels: i > 0 ? overlapHeight : 0
+    });
+  }
 
   return {
     type: 'overlapping-horizontal-bands',
     sections: sections,
-    totalOverlap: overlapHeight * 3  // Total overlapping pixels across all sections
+    totalOverlap: overlapHeight * (numSections - 1)
   };
 }
 
@@ -154,7 +149,7 @@ function getTranscriptionPromptForSection(sectionInfo, overlapContext) {
   let prompt = `
 🚨 KRITISK: BOGSTAV-FOR-BOGSTAV TRANSSKRIPTION - INGEN FORTOLKNING! 🚨
 
-Du transskriberer SEKTION ${sectionInfo.sectionNumber} af 4 fra side ${sectionInfo.pageNumber}.
+Du transskriberer SEKTION ${sectionInfo.sectionNumber} af ${sectionInfo.totalSections} fra side ${sectionInfo.pageNumber}.
 Dette er ${sectionInfo.position} HORISONTALT bånd af siden (top → bund).
 
 ${overlapContext.hasOverlap ? overlapContext.overlapInstructions : ''}
@@ -325,8 +320,8 @@ class PDFBatchProcessor {
     this.lineTracker = new LineNumberTracker();
 
     this.options = {
-      scale: options.scale || 2.0,           // High resolution for OCR
-      sectionsPerPage: options.sectionsPerPage || 4,
+      scale: options.scale || 1.5,           // Balanced resolution (reduced from 2.0 for faster API processing)
+      sectionsPerPage: options.sectionsPerPage || 8,  // Increased from 4 to 8 for smaller file sizes
       batchPauseMs: options.batchPauseMs || 100,  // Pause between pages for GC
       onProgress: options.onProgress || (() => {}),
       onSectionComplete: options.onSectionComplete || (() => {}),
@@ -352,7 +347,7 @@ class PDFBatchProcessor {
       totalPages: this.totalPages,
       totalSections: this.totalSections,
       estimatedTimeMinutes: Math.ceil(this.totalSections * 0.33), // ~20s per section
-      estimatedCostUSD: Math.ceil(this.totalSections * 0.015 * 100) / 100
+      estimatedCostDKK: Math.ceil(this.totalSections * 0.03 * 7.5 * 100) / 100 // ~0.03 USD per section × 7.5 DKK/USD
     };
   }
 
@@ -526,13 +521,15 @@ class PDFBatchProcessor {
    * @returns {Blob} Compressed blob (or original if small enough)
    */
   async compressIfNeeded(blob) {
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    // More aggressive size limit for faster API processing (reduced from 5MB to 2MB)
+    const maxSize = 2 * 1024 * 1024; // 2MB
 
     if (blob.size <= maxSize) {
+      console.log(`Section image size: ${(blob.size / 1024 / 1024).toFixed(2)}MB - within limit`);
       return blob;
     }
 
-    console.log(`Section image size (${(blob.size / 1024 / 1024).toFixed(2)}MB) exceeds 5MB. Compressing...`);
+    console.log(`Section image size (${(blob.size / 1024 / 1024).toFixed(2)}MB) exceeds 2MB. Compressing...`);
 
     // Convert blob to image
     const dataUrl = await new Promise((resolve) => {
@@ -553,10 +550,10 @@ class PDFBatchProcessor {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
-    // Calculate new dimensions (max 4000px on longest side for quality)
+    // Calculate new dimensions (max 3000px on longest side - reduced for faster API processing)
     let width = img.width;
     let height = img.height;
-    const maxDimension = 4000;
+    const maxDimension = 3000;
 
     if (width > maxDimension || height > maxDimension) {
       if (width > height) {

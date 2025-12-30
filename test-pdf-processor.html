@@ -173,7 +173,7 @@
             <p><strong>Total sider:</strong> <span id="total-pages">0</span></p>
             <p><strong>Total sektioner:</strong> <span id="total-sections">0</span> (4 per side)</p>
             <p><strong>Estimeret tid:</strong> <span id="estimated-time">0</span> minutter</p>
-            <p><strong>Estimeret omkostning:</strong> $<span id="estimated-cost">0</span></p>
+            <p><strong>Estimeret omkostning:</strong> <span id="estimated-cost">0</span> kr</p>
         </div>
         <button id="process-btn">Process First Page Only (Test)</button>
         <button id="process-all-btn" style="margin-left: 10px;">Process All Pages</button>
@@ -392,13 +392,13 @@
                 log(`  - Pages: ${metadata.totalPages}`);
                 log(`  - Sections: ${metadata.totalSections}`);
                 log(`  - Est. time: ${metadata.estimatedTimeMinutes} min`);
-                log(`  - Est. cost: $${metadata.estimatedCostUSD}`);
+                log(`  - Est. cost: ${metadata.estimatedCostDKK} kr`);
 
                 // Update metadata UI
                 document.getElementById('total-pages').textContent = metadata.totalPages;
                 document.getElementById('total-sections').textContent = metadata.totalSections;
                 document.getElementById('estimated-time').textContent = metadata.estimatedTimeMinutes;
-                document.getElementById('estimated-cost').textContent = metadata.estimatedCostUSD;
+                document.getElementById('estimated-cost').textContent = metadata.estimatedCostDKK;
                 document.getElementById('progress-total-pages').textContent = metadata.totalPages;
 
                 // Show metadata and progress cards
