@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test PDF Processor</title>
+    <title>Test PDF Processor - Gotisk Transskription</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -175,22 +175,22 @@
             <p><strong>Estimeret tid:</strong> <span id="estimated-time">0</span> minutter</p>
             <p><strong>Estimeret omkostning:</strong> <span id="estimated-cost">0</span> kr</p>
         </div>
-        <button id="process-btn">Process First Page Only (Test)</button>
-        <button id="process-all-btn" style="margin-left: 10px;">Process All Pages</button>
+        <button id="process-btn">Behandl Kun Første Side (Test)</button>
+        <button id="process-all-btn" style="margin-left: 10px;">Behandl Alle Sider</button>
     </div>
 
     <div class="card" id="progress-card" style="display: none;">
-        <h2>3. Processing Progress</h2>
+        <h2>3. Behandlingsforløb</h2>
         <div class="progress">
             <div id="progress-bar" class="progress-bar" style="width: 0%;">0%</div>
         </div>
-        <p><strong>Status:</strong> <span id="status-text">Idle</span></p>
+        <p><strong>Status:</strong> <span id="status-text">Klar</span></p>
         <p><strong>Side:</strong> <span id="current-page">0</span> / <span id="progress-total-pages">0</span></p>
         <p><strong>Sektion:</strong> <span id="current-section">0</span> / 4</p>
 
-        <h3>Latest Transcription Preview:</h3>
+        <h3>Seneste Transskription (Preview):</h3>
         <div id="transcription-preview" class="preview">
-            (No transcription yet)
+            (Ingen transskription endnu)
         </div>
     </div>
 
@@ -352,17 +352,17 @@
         loadBtn.addEventListener('click', async () => {
             if (!currentPDF) return;
 
-            log('Loading PDF metadata...', 'info');
+            log('Indlæser PDF metadata...', 'info');
             loadBtn.disabled = true;
 
             try {
                 processor = new PDFBatchProcessor(currentPDF, {
                     scale: 2.0,
                     onProgress: (progress) => {
-                        log(`Progress: ${progress.currentSection}/${progress.totalSections}`);
+                        log(`Fremskridt: ${progress.currentSection}/${progress.totalSections}`);
                     },
                     onSectionComplete: (data) => {
-                        log(`✓ Section completed: Page ${data.page}, Section ${data.section}`, 'success');
+                        log(`✓ Sektion færdig: Side ${data.page}, Sektion ${data.section}`, 'success');
 
                         // Update progress UI
                         const percent = Math.round((data.currentSection / data.totalSections) * 100);
@@ -373,26 +373,26 @@
 
                         // Update preview
                         document.getElementById('transcription-preview').textContent =
-                            data.latestTranscription || '(No transcription)';
+                            data.latestTranscription || '(Ingen transskription)';
                     },
                     onPageComplete: (data) => {
-                        log(`✓✓ Page ${data.page} completed! Total lines: ${data.mergedTranscription.split('\n').length}`, 'success');
+                        log(`✓✓ Side ${data.page} færdig! Total linjer: ${data.mergedTranscription.split('\n').length}`, 'success');
                     },
                     onError: (error) => {
-                        const errorMsg = error.errorMessage || error.error?.message || 'Unknown error';
-                        const errorType = error.errorType || error.error?.name || 'Error';
-                        log(`✗ ${errorType}: Page ${error.page}, Section ${error.section} - ${errorMsg}`, 'error');
+                        const errorMsg = error.errorMessage || error.error?.message || 'Ukendt fejl';
+                        const errorType = error.errorType || error.error?.name || 'Fejl';
+                        log(`✗ ${errorType}: Side ${error.page}, Sektion ${error.section} - ${errorMsg}`, 'error');
                         console.error('Full error object:', error);
                     }
                 });
 
                 const metadata = await processor.load();
 
-                log(`PDF loaded successfully!`, 'success');
-                log(`  - Pages: ${metadata.totalPages}`);
-                log(`  - Sections: ${metadata.totalSections}`);
-                log(`  - Est. time: ${metadata.estimatedTimeMinutes} min`);
-                log(`  - Est. cost: ${metadata.estimatedCostDKK} kr`);
+                log(`PDF indlæst succesfuldt!`, 'success');
+                log(`  - Sider: ${metadata.totalPages}`);
+                log(`  - Sektioner: ${metadata.totalSections}`);
+                log(`  - Est. tid: ${metadata.estimatedTimeMinutes} min`);
+                log(`  - Est. pris: ${metadata.estimatedCostDKK} kr`);
 
                 // Update metadata UI
                 document.getElementById('total-pages').textContent = metadata.totalPages;
@@ -406,7 +406,7 @@
                 document.getElementById('progress-card').style.display = 'block';
 
             } catch (error) {
-                log(`Failed to load PDF: ${error.message}`, 'error');
+                log(`Kunne ikke indlæse PDF: ${error.message}`, 'error');
                 console.error(error);
                 loadBtn.disabled = false;
             }
@@ -416,17 +416,17 @@
         processBtn.addEventListener('click', async () => {
             if (!processor) return;
 
-            log('Processing FIRST PAGE ONLY (test mode)...', 'info');
+            log('Behandler KUN FØRSTE SIDE (test-tilstand)...', 'info');
             processBtn.disabled = true;
-            document.getElementById('status-text').textContent = 'Processing...';
+            document.getElementById('status-text').textContent = 'Behandler...';
 
             try {
                 await processor.processPage(1);
-                log('✓ First page processed successfully!', 'success');
-                log('Check the transcription preview above for results.');
-                document.getElementById('status-text').textContent = 'Completed (1 page)';
+                log('✓ Første side behandlet succesfuldt!', 'success');
+                log('Se transskriptions-preview ovenfor for resultater.');
+                document.getElementById('status-text').textContent = 'Færdig (1 side)';
             } catch (error) {
-                log(`Failed to process page: ${error.message}`, 'error');
+                log(`Kunne ikke behandle side: ${error.message}`, 'error');
                 console.error(error);
             } finally {
                 processBtn.disabled = false;
@@ -437,23 +437,23 @@
         processAllBtn.addEventListener('click', async () => {
             if (!processor) return;
 
-            const confirmed = confirm(`This will process ALL pages. Continue?`);
+            const confirmed = confirm(`Dette vil behandle ALLE sider. Fortsæt?`);
             if (!confirmed) return;
 
-            log('Processing ALL PAGES...', 'info');
+            log('Behandler ALLE SIDER...', 'info');
             processAllBtn.disabled = true;
             processBtn.disabled = true;
-            document.getElementById('status-text').textContent = 'Processing all pages...';
+            document.getElementById('status-text').textContent = 'Behandler alle sider...';
 
             try {
                 const results = await processor.processAll();
-                log(`✓✓✓ ALL PAGES PROCESSED! Total: ${results.length} pages`, 'success');
-                document.getElementById('status-text').textContent = `Completed (${results.length} pages)`;
+                log(`✓✓✓ ALLE SIDER BEHANDLET! Total: ${results.length} sider`, 'success');
+                document.getElementById('status-text').textContent = `Færdig (${results.length} sider)`;
 
                 // TODO: Download Markdown file
-                log('Next: Implement Markdown download feature');
+                log('Næste: Implementér Markdown download-funktion');
             } catch (error) {
-                log(`Failed to process all pages: ${error.message}`, 'error');
+                log(`Kunne ikke behandle alle sider: ${error.message}`, 'error');
                 console.error(error);
             } finally {
                 processAllBtn.disabled = false;
@@ -463,10 +463,10 @@
 
         // Clear log
         clearLogBtn.addEventListener('click', () => {
-            logDiv.innerHTML = '<div class="log-entry">Log cleared.</div>';
+            logDiv.innerHTML = '<div class="log-entry">Log ryddet.</div>';
         });
 
-        log('Test page loaded. PDF.js version: ' + (typeof pdfjsLib !== 'undefined' ? pdfjsLib.version : 'not loaded'));
+        log('Test-side indlæst. PDF.js version: ' + (typeof pdfjsLib !== 'undefined' ? pdfjsLib.version : 'ikke indlæst'));
     </script>
 </body>
 </html>
