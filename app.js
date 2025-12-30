@@ -1,8 +1,9 @@
 // Configuration
 let config = {
     claudeApiKey: '',
-    supabaseUrl: '',
-    supabaseKey: ''
+    // Hardcoded Supabase credentials (shared database for all users)
+    supabaseUrl: 'https://bjnjrgnvndpxbkkdyvyd.supabase.co',
+    supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqbmpyZ252bmRweGJra2R5dnlkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2NzEyMjUsImV4cCI6MjA4MjI0NzIyNX0.s5UzpAZXRVBIKh69O5EKk1-MYKPPCNnrAStsttlsb0w'
 };
 
 // State
@@ -10,6 +11,18 @@ let currentFile = null;
 let currentImageData = null;
 let currentTranscription = null;
 let supabase = null;
+
+// PDF-specific state
+let currentPDFProcessor = null;
+let currentPDFFile = null;
+let processingType = null; // 'image' | 'pdf'
+
+// Detect file type helper
+function detectFileType(file) {
+    if (file.type === 'application/pdf') return 'pdf';
+    if (file.type.startsWith('image/')) return 'image';
+    return 'unknown';
+}
 
 // DOM Elements
 const fileInput = document.getElementById('file-input');
@@ -39,28 +52,32 @@ function loadConfig() {
     const savedConfig = localStorage.getItem('gotisk-config');
     if (savedConfig) {
         config = JSON.parse(savedConfig);
-        initializeSupabase();
-    } else {
-        showConfigModal();
     }
+    // Always initialize Supabase (hardcoded credentials)
+    initializeSupabase();
+    // Don't show config modal automatically - let users configure when they need it
 }
 
 function showConfigModal() {
     configModal.classList.add('show');
 
-    // Pre-fill if exists
+    // Pre-fill Claude API key if exists
     if (config.claudeApiKey) document.getElementById('claude-api-key').value = config.claudeApiKey;
-    if (config.supabaseUrl) document.getElementById('supabase-url').value = config.supabaseUrl;
-    if (config.supabaseKey) document.getElementById('supabase-key').value = config.supabaseKey;
+    // Note: Supabase credentials are hardcoded, not in UI
 }
 
 function saveConfig() {
-    config.claudeApiKey = document.getElementById('claude-api-key').value.trim();
-    config.supabaseUrl = document.getElementById('supabase-url').value.trim();
-    config.supabaseKey = document.getElementById('supabase-key').value.trim();
+    const apiKey = document.getElementById('claude-api-key').value.trim();
 
-    if (!config.claudeApiKey) {
-        alert('Claude API Key er påkrævet');
+    // If API key is empty, just close modal (user can configure later)
+    if (!apiKey) {
+        configModal.classList.remove('show');
+        return;
+    }
+
+    // Validate API key format (Claude API keys start with "sk-ant-")
+    if (!apiKey.startsWith('sk-ant-')) {
+        alert('Ugyldig API-nøgle format. Nøglen skal starte med "sk-ant-"');
         return;
     }
 
@@ -83,13 +100,12 @@ Klik OK for at bekræfte at du forstår.`;
         return;
     }
 
+    // Save API key
+    config.claudeApiKey = apiKey;
     localStorage.setItem('gotisk-config', JSON.stringify(config));
     configModal.classList.remove('show');
 
-    if (config.supabaseUrl && config.supabaseKey) {
-        initializeSupabase();
-        loadSavedTranscriptions();
-    }
+    alert('✓ API-nøgle gemt! Du kan nu transskribere dokumenter.');
 }
 
 function initializeSupabase() {
@@ -122,14 +138,29 @@ function setupEventListeners() {
         e.preventDefault();
         uploadArea.classList.remove('dragover');
         const file = e.dataTransfer.files[0];
-        if (file && file.type.startsWith('image/')) {
-            handleFileSelect(file);
+        if (file) {
+            const fileType = detectFileType(file);
+            if (fileType === 'pdf') {
+                handlePDFUpload(file);
+            } else if (fileType === 'image') {
+                handleImageUpload(file);
+            } else {
+                alert('Kun billeder (JPG, PNG) og PDF-filer understøttes');
+            }
         }
     });
 
     fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            handleFileSelect(e.target.files[0]);
+        const file = e.target.files[0];
+        if (file) {
+            const fileType = detectFileType(file);
+            if (fileType === 'pdf') {
+                handlePDFUpload(file);
+            } else if (fileType === 'image') {
+                handleImageUpload(file);
+            } else {
+                alert('Kun billeder (JPG, PNG) og PDF-filer understøttes');
+            }
         }
     });
 
@@ -138,10 +169,42 @@ function setupEventListeners() {
     saveBtn.addEventListener('click', saveTranscription);
     exportBtn.addEventListener('click', exportTranscription);
     saveConfigBtn.addEventListener('click', saveConfig);
+
+    // Settings button
+    const settingsBtn = document.getElementById('settings-btn');
+    if (settingsBtn) {
+        settingsBtn.addEventListener('click', showConfigModal);
+    }
+
+    // Close config modal button
+    const closeConfigBtn = document.getElementById('close-config-btn');
+    if (closeConfigBtn) {
+        closeConfigBtn.addEventListener('click', () => {
+            configModal.classList.remove('show');
+        });
+    }
+
+    // PDF Processing buttons
+    const pdfProcessFirstBtn = document.getElementById('pdf-process-first-btn');
+    const pdfProcessAllBtn = document.getElementById('pdf-process-all-btn');
+    const pdfCancelBtn = document.getElementById('pdf-cancel-btn');
+
+    if (pdfProcessFirstBtn) {
+        pdfProcessFirstBtn.addEventListener('click', processPDFFirstPage);
+    }
+
+    if (pdfProcessAllBtn) {
+        pdfProcessAllBtn.addEventListener('click', processPDFAll);
+    }
+
+    if (pdfCancelBtn) {
+        pdfCancelBtn.addEventListener('click', cancelPDFProcessing);
+    }
 }
 
-function handleFileSelect(file) {
+function handleImageUpload(file) {
     currentFile = file;
+    processingType = 'image';
 
     // Check file size and compress if needed
     const maxSize = 5 * 1024 * 1024; // 5MB in bytes
@@ -223,6 +286,12 @@ function compressImage(file) {
 async function transcribeImage() {
     if (!currentImageData) return;
 
+    // Check if API key is configured
+    if (!config.claudeApiKey) {
+        alert('Claude API-nøgle mangler. Klik på ⚙️ indstillinger (øverst til højre) for at konfigurere din API-nøgle.\n\nSe vejledning: https://console.anthropic.com/settings/keys');
+        return;
+    }
+
     showLoading(true);
 
     try {
@@ -279,6 +348,229 @@ async function transcribeImage() {
         alert('Fejl ved transskription: ' + error.message);
     } finally {
         showLoading(false);
+    }
+}
+
+// ======================
+// PDF PROCESSING
+// ======================
+
+async function handlePDFUpload(file) {
+    console.log('PDF selected:', file.name);
+    currentPDFFile = file;
+    processingType = 'pdf';
+
+    // Hide image sections, show PDF sections
+    previewSection.style.display = 'none';
+    transcriptionSection.style.display = 'none';
+    document.getElementById('pdf-metadata-section').style.display = 'block';
+
+    // Update upload area feedback
+    const uploadPlaceholder = uploadArea.querySelector('.upload-placeholder p');
+    if (uploadPlaceholder) {
+        uploadPlaceholder.textContent = `📄 ${file.name} valgt - se information nedenfor`;
+    }
+
+    try {
+        // Load PDF metadata
+        await loadPDFMetadata(file);
+    } catch (error) {
+        console.error('Failed to load PDF:', error);
+        alert(`Kunne ikke indlæse PDF: ${error.message}`);
+    }
+}
+
+async function loadPDFMetadata(file) {
+    // Check for API key
+    const apiKey = localStorage.getItem('claudeApiKey') || config.claudeApiKey;
+    if (!apiKey) {
+        alert('Claude API-nøgle mangler! Klik på ⚙️ Indstillinger for at tilføje din nøgle.');
+        throw new Error('No API key configured');
+    }
+
+    console.log('Loading PDF metadata...');
+    showLoading(true, 'Indlæser PDF metadata...');
+
+    try {
+        // Create PDFBatchProcessor instance
+        currentPDFProcessor = new PDFBatchProcessor(file, {
+            scale: 2.0,
+            sectionsPerPage: 8,
+            onProgress: (progress) => {
+                // Optional: fine-grained progress
+            },
+            onSectionComplete: (data) => {
+                updatePDFProgress(data);
+            },
+            onPageComplete: (data) => {
+                console.log(`✓ Side ${data.page} færdig`);
+            },
+            onError: (error) => {
+                console.error('PDF processing error:', error);
+                const preview = document.getElementById('pdf-preview');
+                if (preview) {
+                    preview.innerHTML += `\n<span style="color: #e74c3c;">[FEJL på side ${error.page}, sektion ${error.section}]</span>`;
+                }
+            }
+        });
+
+        // Load metadata
+        const metadata = await currentPDFProcessor.load();
+
+        console.log('PDF metadata loaded:', metadata);
+
+        // Display metadata in UI
+        document.getElementById('pdf-filename').textContent = file.name;
+        document.getElementById('pdf-pages').textContent = metadata.totalPages;
+        document.getElementById('pdf-sections').textContent = metadata.totalSections;
+        document.getElementById('pdf-time').textContent = metadata.estimatedTimeMinutes;
+        document.getElementById('pdf-cost').textContent = metadata.estimatedCostDKK;
+
+        showLoading(false);
+
+    } catch (error) {
+        showLoading(false);
+        throw error;
+    }
+}
+
+async function processPDFFirstPage() {
+    if (!currentPDFProcessor) {
+        alert('Ingen PDF indlæst');
+        return;
+    }
+
+    console.log('Processing first page only...');
+
+    // Show loading with PDF progress UI
+    showLoading(true, 'Behandler første side...');
+    document.getElementById('pdf-progress-ui').style.display = 'block';
+    document.getElementById('pdf-total-pages').textContent = '1';
+
+    try {
+        await currentPDFProcessor.processPage(1);
+
+        // Get results
+        const results = currentPDFProcessor.mergedResults;
+        if (results && results.length > 0) {
+            displayPDFResults(results);
+        }
+
+        showLoading(false);
+
+    } catch (error) {
+        console.error('Failed to process first page:', error);
+        showLoading(false);
+        alert(`Kunne ikke behandle første side: ${error.message}`);
+    }
+}
+
+async function processPDFAll() {
+    if (!currentPDFProcessor) {
+        alert('Ingen PDF indlæst');
+        return;
+    }
+
+    // Get metadata for confirmation
+    const pages = document.getElementById('pdf-pages').textContent;
+    const cost = document.getElementById('pdf-cost').textContent;
+    const time = document.getElementById('pdf-time').textContent;
+
+    // Confirm with user
+    const confirmed = confirm(
+        `Dette vil behandle ALLE ${pages} sider.\n\n` +
+        `Estimeret tid: ${time} minutter\n` +
+        `Estimeret omkostning: ${cost} kr\n\n` +
+        `Fortsæt?`
+    );
+
+    if (!confirmed) return;
+
+    console.log('Processing all pages...');
+
+    // Show loading with PDF progress UI
+    showLoading(true, 'Behandler alle sider...');
+    document.getElementById('pdf-progress-ui').style.display = 'block';
+    document.getElementById('pdf-total-pages').textContent = pages;
+
+    try {
+        const results = await currentPDFProcessor.processAll();
+
+        console.log(`All pages processed! Total: ${results.length} pages`);
+
+        displayPDFResults(results);
+
+        showLoading(false);
+
+        // Success notification
+        if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('PDF Transskription Færdig!', {
+                body: `${results.length} sider behandlet`,
+                icon: '/favicon.ico'
+            });
+        }
+
+    } catch (error) {
+        console.error('Failed to process all pages:', error);
+        showLoading(false);
+        alert(`Kunne ikke behandle alle sider: ${error.message}`);
+    }
+}
+
+function updatePDFProgress(data) {
+    // Update progress bar
+    const percent = Math.round((data.currentSection / data.totalSections) * 100);
+    document.getElementById('pdf-progress-bar').style.width = `${percent}%`;
+    document.getElementById('pdf-progress-percent').textContent = `${percent}%`;
+
+    // Update counters
+    document.getElementById('pdf-current-page').textContent = data.page;
+    document.getElementById('pdf-current-section').textContent = data.section;
+
+    // Update live preview (last ~10 lines)
+    if (data.latestTranscription) {
+        const lines = data.latestTranscription.split('\n').slice(-10);
+        const preview = document.getElementById('pdf-preview');
+        if (preview) {
+            preview.textContent = lines.join('\n');
+            preview.scrollTop = preview.scrollHeight;
+        }
+    }
+}
+
+function displayPDFResults(results) {
+    // Format as Markdown
+    let markdown = `# Gotisk Transskription\n\n`;
+    markdown += `**Fil**: ${currentPDFFile.name}\n`;
+    markdown += `**Transskriberet**: ${new Date().toLocaleDateString('da-DK')}\n`;
+    markdown += `**Total sider**: ${results.length}\n\n`;
+    markdown += `---\n\n`;
+
+    results.forEach(pageResult => {
+        markdown += `## Side ${pageResult.page}\n\n`;
+        markdown += `**Linjer**: ${pageResult.totalLines}\n\n`;
+        markdown += pageResult.transcription;
+        markdown += `\n\n---\n\n`;
+    });
+
+    // Show in transcription section
+    transcriptionSection.style.display = 'block';
+    transcriptionText.value = markdown;
+
+    // Update export button text
+    const exportBtn = document.getElementById('export-btn');
+    if (exportBtn) {
+        exportBtn.textContent = 'Download Markdown';
+    }
+
+    console.log('Results displayed in transcription section');
+}
+
+function cancelPDFProcessing() {
+    if (currentPDFProcessor) {
+        currentPDFProcessor.cancel();
+        showLoading(false);
+        alert('PDF behandling annulleret');
     }
 }
 
@@ -487,11 +779,21 @@ function exportTranscription() {
     const text = transcriptionText.value;
     if (!text) return;
 
-    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    let filename, mimeType;
+
+    if (processingType === 'pdf') {
+        filename = `transskription_${currentPDFFile.name.replace(/\.[^/.]+$/, '')}.md`;
+        mimeType = 'text/markdown;charset=utf-8';
+    } else {
+        filename = `transskription_${currentFile.name.replace(/\.[^/.]+$/, '')}.txt`;
+        mimeType = 'text/plain;charset=utf-8';
+    }
+
+    const blob = new Blob([text], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `transskription_${currentFile.name.replace(/\.[^/.]+$/, '')}.txt`;
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
 }
@@ -621,6 +923,18 @@ async function deleteItem(item) {
     loadSavedTranscriptions();
 }
 
-function showLoading(show) {
+function showLoading(show, message = 'Transskriberer dokument...') {
     loadingOverlay.style.display = show ? 'flex' : 'none';
+    const loadingText = document.getElementById('loading-text');
+    if (loadingText) {
+        loadingText.textContent = message;
+    }
+
+    // Hide PDF progress UI when hiding loading overlay
+    if (!show) {
+        const pdfProgressUI = document.getElementById('pdf-progress-ui');
+        if (pdfProgressUI) {
+            pdfProgressUI.style.display = 'none';
+        }
+    }
 }

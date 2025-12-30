@@ -9,8 +9,15 @@
 <body>
     <div class="container">
         <header>
-            <h1>Gotisk Transskription</h1>
-            <p class="subtitle">Upload gotiske dokumenter og få dem transskriberet til moderne dansk</p>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1>Gotisk Transskription</h1>
+                    <p class="subtitle">Upload gotiske dokumenter og få dem transskriberet til moderne dansk</p>
+                </div>
+                <button id="settings-btn" class="btn btn-secondary" style="padding: 10px 20px;" title="Konfigurer Claude API-nøgle">
+                    ⚙️ Indstillinger
+                </button>
+            </div>
         </header>
 
         <main>
@@ -18,7 +25,7 @@
             <section id="upload-section" class="card">
                 <h2>Upload dokument</h2>
                 <div class="upload-area" id="upload-area">
-                    <input type="file" id="file-input" accept="image/*" hidden>
+                    <input type="file" id="file-input" accept="image/*,.pdf,application/pdf" hidden>
                     <div class="upload-placeholder">
                         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -26,10 +33,26 @@
                             <line x1="12" y1="3" x2="12" y2="15"></line>
                         </svg>
                         <p>Klik for at vælge billede eller træk det hertil</p>
-                        <p class="small">PNG, JPG - filer over 5MB komprimeres automatisk</p>
+                        <p class="small">PNG, JPG, PDF - billeder over 5MB komprimeres automatisk</p>
                     </div>
                 </div>
                 <button id="transcribe-btn" class="btn btn-primary" disabled>Transskribér</button>
+            </section>
+
+            <!-- PDF Metadata Section -->
+            <section id="pdf-metadata-section" class="card" style="display: none;">
+                <h2>📄 PDF Information</h2>
+                <div class="info-box">
+                    <p><strong>Fil:</strong> <span id="pdf-filename"></span></p>
+                    <p><strong>Sider:</strong> <span id="pdf-pages">0</span></p>
+                    <p><strong>Sektioner:</strong> <span id="pdf-sections">0</span> (8 per side)</p>
+                    <p><strong>Est. tid:</strong> <span id="pdf-time">0</span> minutter</p>
+                    <p><strong>Est. omkostning:</strong> <span id="pdf-cost">0</span> kr</p>
+                </div>
+                <div class="button-group" style="margin-top: 15px;">
+                    <button id="pdf-process-first-btn" class="btn btn-secondary">Test med første side</button>
+                    <button id="pdf-process-all-btn" class="btn btn-primary">Behandl alle sider</button>
+                </div>
             </section>
 
             <!-- Billede preview -->
@@ -68,7 +91,20 @@
             <!-- Loading overlay -->
             <div id="loading-overlay" style="display: none;">
                 <div class="spinner"></div>
-                <p>Transskriberer dokument...</p>
+                <p id="loading-text">Transskriberer dokument...</p>
+
+                <!-- PDF Progress UI -->
+                <div id="pdf-progress-ui" style="display: none; margin-top: 20px; max-width: 600px; color: white;">
+                    <div style="width: 100%; background: rgba(255,255,255,0.2); border-radius: 4px; height: 30px; margin-bottom: 15px; overflow: hidden;">
+                        <div id="pdf-progress-bar" style="width: 0%; height: 100%; background: #3498db; display: flex; align-items: center; justify-content: center; font-weight: bold; transition: width 0.3s ease;">
+                            <span id="pdf-progress-percent">0%</span>
+                        </div>
+                    </div>
+                    <p><strong>Side:</strong> <span id="pdf-current-page">0</span> / <span id="pdf-total-pages">0</span></p>
+                    <p><strong>Sektion:</strong> <span id="pdf-current-section">0</span> / 8</p>
+                    <div id="pdf-preview" style="background: rgba(0,0,0,0.5); padding: 10px; max-height: 150px; overflow-y: auto; margin-top: 10px; font-family: monospace; font-size: 12px; text-align: left; white-space: pre-wrap; word-break: break-word;"></div>
+                    <button id="pdf-cancel-btn" class="btn btn-danger" style="margin-top: 10px;">Annullér</button>
+                </div>
             </div>
         </main>
 
@@ -80,27 +116,28 @@
     <!-- Config Modal -->
     <div id="config-modal" class="modal">
         <div class="modal-content">
-            <h2>Konfiguration påkrævet</h2>
-            <p>Indtast dine API-nøgler for at bruge appen:</p>
+            <h2>⚙️ Indstillinger</h2>
+            <p>Konfigurer din Claude API-nøgle for at kunne transskribere dokumenter.</p>
 
             <div class="form-group">
                 <label for="claude-api-key">Claude API Key:</label>
                 <input type="password" id="claude-api-key" placeholder="sk-ant-...">
-                <a href="https://console.anthropic.com/settings/keys" target="_blank" class="help-link">Få en API-nøgle</a>
+                <a href="https://console.anthropic.com/settings/keys" target="_blank" class="help-link">Få en API-nøgle →</a>
             </div>
 
-            <div class="form-group">
-                <label for="supabase-url">Supabase URL:</label>
-                <input type="text" id="supabase-url" placeholder="https://xxx.supabase.co">
+            <div class="info-box" style="margin-top: 15px; font-size: 14px;">
+                <strong>Hvordan får jeg en API-nøgle?</strong><br>
+                1. Gå til <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a><br>
+                2. Opret konto og tilføj kreditkort (påkrævet)<br>
+                3. Klik "Create Key" under Settings → API Keys<br>
+                4. Kopiér nøglen og indsæt den her<br><br>
+                <strong>Omkostning:</strong> ~0.22 kr per billede (betales via dit eget kreditkort til Anthropic)
             </div>
 
-            <div class="form-group">
-                <label for="supabase-key">Supabase Anon Key:</label>
-                <input type="password" id="supabase-key" placeholder="eyJ...">
-                <a href="https://supabase.com/dashboard/project/_/settings/api" target="_blank" class="help-link">Find dine Supabase nøgler</a>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button id="save-config-btn" class="btn btn-primary">Gem API-nøgle</button>
+                <button id="close-config-btn" class="btn btn-secondary">Luk</button>
             </div>
-
-            <button id="save-config-btn" class="btn btn-primary">Gem konfiguration</button>
         </div>
     </div>
 
