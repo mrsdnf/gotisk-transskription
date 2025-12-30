@@ -606,7 +606,7 @@ class PDFBatchProcessor {
     // Convert blob to base64 for Claude API
     const base64 = await this.blobToBase64(imageBlob);
 
-    // Get section-specific prompt
+    // Get section-specific prompt (contains all necessary instructions)
     const sectionPrompt = getTranscriptionPromptForSection({
       pageNumber: pageNum,
       sectionNumber: sectionNum,
@@ -614,11 +614,9 @@ class PDFBatchProcessor {
       totalSections: this.options.sectionsPerPage
     }, overlapContext);
 
-    // Get enhanced prompt from training data (from app.js)
-    const enhancedPrompt = this.getEnhancedTranscriptionPrompt();
-
-    // Combine prompts: section instructions + enhanced prompt
-    const fullPrompt = sectionPrompt + '\n\n' + enhancedPrompt;
+    // Use ONLY the section prompt to keep it under Claude's processing time limit
+    // The enhanced prompt with training data is too long and causes 504 timeouts
+    const fullPrompt = sectionPrompt;
 
     console.log(`Transcribing page ${pageNum}, section ${sectionNum}...`);
 
