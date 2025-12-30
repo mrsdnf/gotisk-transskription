@@ -273,6 +273,25 @@
                 return;
             }
 
+            // Security warning when saving API key
+            const securityWarning = `⚠️ SIKKERHEDSADVARSEL ⚠️
+
+Din API-nøgle gemmes lokalt i browseren.
+
+VIGTIGT:
+✓ Brug IKKE på offentlige computere
+✓ Luk fanen når du er færdig
+✓ Sæt budget-limits i Anthropic Console
+✓ Generer ny nøgle hvis computer kompromitteres
+
+Læs mere: https://console.anthropic.com/settings/limits
+
+Klik OK for at bekræfte at du forstår.`;
+
+            if (!confirm(securityWarning)) {
+                return;
+            }
+
             localStorage.setItem('claudeApiKey', key);
             keyStatus.innerHTML = '<div class="success-message">✓ API-nøgle gemt! Du kan nu processe PDF-filer.</div>';
             log('API key saved successfully', 'success');

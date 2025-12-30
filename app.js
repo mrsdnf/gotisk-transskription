@@ -64,6 +64,25 @@ function saveConfig() {
         return;
     }
 
+    // Security warning when saving API key
+    const securityWarning = `⚠️ SIKKERHEDSADVARSEL ⚠️
+
+Din API-nøgle gemmes lokalt i browseren.
+
+VIGTIGT:
+✓ Brug IKKE på offentlige computere
+✓ Luk fanen når du er færdig
+✓ Sæt budget-limits i Anthropic Console
+✓ Generer ny nøgle hvis computer kompromitteres
+
+Læs mere: https://console.anthropic.com/settings/limits
+
+Klik OK for at bekræfte at du forstår.`;
+
+    if (!confirm(securityWarning)) {
+        return;
+    }
+
     localStorage.setItem('gotisk-config', JSON.stringify(config));
     configModal.classList.remove('show');
 
