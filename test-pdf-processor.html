@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test PDF Processor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            margin: 20px 0;
+        }
+        .upload-area:hover {
+            border-color: #007bff;
+            background: #f8f9fa;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .info {
+            background: #e7f3ff;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .progress {
+            background: #f0f0f0;
+            border-radius: 8px;
+            height: 30px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        .progress-bar {
+            background: #007bff;
+            height: 100%;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 2px 0;
+        }
+        .log-entry.error {
+            color: #dc3545;
+        }
+        .log-entry.success {
+            color: #28a745;
+        }
+        .preview {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        .api-key-input {
+            width: 100%;
+            max-width: 600px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+            margin: 10px 0;
+        }
+        .success-message {
+            color: #28a745;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .warning-message {
+            color: #ffc107;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 PDF Batch Processor Test</h1>
+
+    <div class="card">
+        <h2>0. Claude API Key Setup</h2>
+        <p>Indsæt din Claude API-nøgle her (begynder med <code>sk-ant-api03-...</code>):</p>
+        <input type="password" id="api-key-input" class="api-key-input" placeholder="sk-ant-api03-...">
+        <div class="button-group">
+            <button id="save-key-btn">Gem API-nøgle</button>
+            <button id="show-key-btn" style="background: #6c757d;">Vis/Skjul</button>
+            <button id="clear-key-btn" style="background: #dc3545;">Fjern nøgle</button>
+        </div>
+        <div id="key-status"></div>
+        <div class="info" style="margin-top: 15px;">
+            <strong>Hvor får jeg en API-nøgle?</strong><br>
+            1. Gå til <a href="https://console.anthropic.com/settings/keys" target="_blank">https://console.anthropic.com/settings/keys</a><br>
+            2. Klik "Create Key"<br>
+            3. Kopiér nøglen og indsæt den her<br>
+            4. Nøglen gemmes lokalt i din browser (ikke på server)
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>1. Upload Test PDF</h2>
+        <div class="upload-area" id="upload-area">
+            <input type="file" id="pdf-input" accept="application/pdf" hidden>
+            <p>📄 Klik for at vælge PDF (eller træk her)</p>
+            <p style="font-size: 14px; color: #666;">Vælg en lille PDF med 5-10 sider for test</p>
+        </div>
+        <div id="pdf-info" style="display: none;" class="info">
+            <p><strong>Fil:</strong> <span id="pdf-filename"></span></p>
+            <p><strong>Størrelse:</strong> <span id="pdf-filesize"></span></p>
+        </div>
+        <button id="load-btn" disabled>Load PDF Metadata</button>
+    </div>
+
+    <div class="card" id="metadata-card" style="display: none;">
+        <h2>2. PDF Metadata</h2>
+        <div class="info">
+            <p><strong>Total sider:</strong> <span id="total-pages">0</span></p>
+            <p><strong>Total sektioner:</strong> <span id="total-sections">0</span> (4 per side)</p>
+            <p><strong>Estimeret tid:</strong> <span id="estimated-time">0</span> minutter</p>
+            <p><strong>Estimeret omkostning:</strong> $<span id="estimated-cost">0</span></p>
+        </div>
+        <button id="process-btn">Process First Page Only (Test)</button>
+        <button id="process-all-btn" style="margin-left: 10px;">Process All Pages</button>
+    </div>
+
+    <div class="card" id="progress-card" style="display: none;">
+        <h2>3. Processing Progress</h2>
+        <div class="progress">
+            <div id="progress-bar" class="progress-bar" style="width: 0%;">0%</div>
+        </div>
+        <p><strong>Status:</strong> <span id="status-text">Idle</span></p>
+        <p><strong>Side:</strong> <span id="current-page">0</span> / <span id="progress-total-pages">0</span></p>
+        <p><strong>Sektion:</strong> <span id="current-section">0</span> / 4</p>
+
+        <h3>Latest Transcription Preview:</h3>
+        <div id="transcription-preview" class="preview">
+            (No transcription yet)
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>4. Console Log</h2>
+        <div id="log" class="log">
+            <div class="log-entry">Ready to test PDF processor...</div>
+        </div>
+        <button id="clear-log-btn" style="margin-top: 10px;">Clear Log</button>
+    </div>
+
+    <!-- PDF.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+      if (typeof pdfjsLib !== 'undefined') {
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      }
+    </script>
+
+    <!-- Training Data (MUST load before pdf-processor.js) -->
+    <script src="training-data.js"></script>
+
+    <!-- PDF Processor -->
+    <script src="pdf-processor.js"></script>
+
+    <!-- Test Script -->
+    <script>
+        let currentPDF = null;
+        let processor = null;
+
+        // DOM elements
+        const uploadArea = document.getElementById('upload-area');
+        const pdfInput = document.getElementById('pdf-input');
+        const loadBtn = document.getElementById('load-btn');
+        const processBtn = document.getElementById('process-btn');
+        const processAllBtn = document.getElementById('process-all-btn');
+        const logDiv = document.getElementById('log');
+        const clearLogBtn = document.getElementById('clear-log-btn');
+
+        // API Key elements
+        const apiKeyInput = document.getElementById('api-key-input');
+        const saveKeyBtn = document.getElementById('save-key-btn');
+        const showKeyBtn = document.getElementById('show-key-btn');
+        const clearKeyBtn = document.getElementById('clear-key-btn');
+        const keyStatus = document.getElementById('key-status');
+
+        // Logging function
+        function log(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+
+        // Check if API key exists on load
+        function checkAPIKey() {
+            const savedKey = localStorage.getItem('claudeApiKey');
+            if (savedKey) {
+                apiKeyInput.value = savedKey;
+                keyStatus.innerHTML = '<div class="success-message">✓ API-nøgle er gemt og klar til brug</div>';
+                log('API key loaded from localStorage', 'success');
+            } else {
+                keyStatus.innerHTML = '<div class="warning-message">⚠️ Ingen API-nøgle fundet. Indsæt venligst din nøgle ovenfor.</div>';
+            }
+        }
+
+        // Save API key to localStorage
+        saveKeyBtn.addEventListener('click', () => {
+            const key = apiKeyInput.value.trim();
+            if (!key) {
+                keyStatus.innerHTML = '<div class="warning-message">⚠️ Indtast venligst en API-nøgle</div>';
+                return;
+            }
+
+            if (!key.startsWith('sk-ant-api03-')) {
+                keyStatus.innerHTML = '<div class="warning-message">⚠️ Nøglen skal starte med "sk-ant-api03-"</div>';
+                return;
+            }
+
+            localStorage.setItem('claudeApiKey', key);
+            keyStatus.innerHTML = '<div class="success-message">✓ API-nøgle gemt! Du kan nu processe PDF-filer.</div>';
+            log('API key saved successfully', 'success');
+        });
+
+        // Show/hide API key
+        showKeyBtn.addEventListener('click', () => {
+            if (apiKeyInput.type === 'password') {
+                apiKeyInput.type = 'text';
+                showKeyBtn.textContent = 'Skjul';
+            } else {
+                apiKeyInput.type = 'password';
+                showKeyBtn.textContent = 'Vis/Skjul';
+            }
+        });
+
+        // Clear API key
+        clearKeyBtn.addEventListener('click', () => {
+            if (confirm('Er du sikker på at du vil fjerne API-nøglen?')) {
+                localStorage.removeItem('claudeApiKey');
+                apiKeyInput.value = '';
+                keyStatus.innerHTML = '<div class="warning-message">⚠️ API-nøgle fjernet</div>';
+                log('API key cleared', 'info');
+            }
+        });
+
+        // Initialize API key check on page load
+        checkAPIKey();
+
+        // Upload area click handler
+        uploadArea.addEventListener('click', () => {
+            pdfInput.click();
+        });
+
+        // Drag and drop handlers
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#007bff';
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.borderColor = '#ccc';
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#ccc';
+            const file = e.dataTransfer.files[0];
+            if (file && file.type === 'application/pdf') {
+                handlePDFFile(file);
+            } else {
+                log('Please select a PDF file', 'error');
+            }
+        });
+
+        // File input change handler
+        pdfInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                handlePDFFile(file);
+            }
+        });
+
+        // Handle PDF file selection
+        function handlePDFFile(file) {
+            log(`PDF selected: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+
+            document.getElementById('pdf-filename').textContent = file.name;
+            document.getElementById('pdf-filesize').textContent = `${(file.size / 1024 / 1024).toFixed(2)} MB`;
+            document.getElementById('pdf-info').style.display = 'block';
+
+            currentPDF = file;
+            loadBtn.disabled = false;
+        }
+
+        // Load PDF metadata
+        loadBtn.addEventListener('click', async () => {
+            if (!currentPDF) return;
+
+            log('Loading PDF metadata...', 'info');
+            loadBtn.disabled = true;
+
+            try {
+                processor = new PDFBatchProcessor(currentPDF, {
+                    scale: 2.0,
+                    onProgress: (progress) => {
+                        log(`Progress: ${progress.currentSection}/${progress.totalSections}`);
+                    },
+                    onSectionComplete: (data) => {
+                        log(`✓ Section completed: Page ${data.page}, Section ${data.section}`, 'success');
+
+                        // Update progress UI
+                        const percent = Math.round((data.currentSection / data.totalSections) * 100);
+                        document.getElementById('progress-bar').style.width = `${percent}%`;
+                        document.getElementById('progress-bar').textContent = `${percent}%`;
+                        document.getElementById('current-page').textContent = data.page;
+                        document.getElementById('current-section').textContent = data.section;
+
+                        // Update preview
+                        document.getElementById('transcription-preview').textContent =
+                            data.latestTranscription || '(No transcription)';
+                    },
+                    onPageComplete: (data) => {
+                        log(`✓✓ Page ${data.page} completed! Total lines: ${data.mergedTranscription.split('\n').length}`, 'success');
+                    },
+                    onError: (error) => {
+                        const errorMsg = error.errorMessage || error.error?.message || 'Unknown error';
+                        const errorType = error.errorType || error.error?.name || 'Error';
+                        log(`✗ ${errorType}: Page ${error.page}, Section ${error.section} - ${errorMsg}`, 'error');
+                        console.error('Full error object:', error);
+                    }
+                });
+
+                const metadata = await processor.load();
+
+                log(`PDF loaded successfully!`, 'success');
+                log(`  - Pages: ${metadata.totalPages}`);
+                log(`  - Sections: ${metadata.totalSections}`);
+                log(`  - Est. time: ${metadata.estimatedTimeMinutes} min`);
+                log(`  - Est. cost: $${metadata.estimatedCostUSD}`);
+
+                // Update metadata UI
+                document.getElementById('total-pages').textContent = metadata.totalPages;
+                document.getElementById('total-sections').textContent = metadata.totalSections;
+                document.getElementById('estimated-time').textContent = metadata.estimatedTimeMinutes;
+                document.getElementById('estimated-cost').textContent = metadata.estimatedCostUSD;
+                document.getElementById('progress-total-pages').textContent = metadata.totalPages;
+
+                // Show metadata and progress cards
+                document.getElementById('metadata-card').style.display = 'block';
+                document.getElementById('progress-card').style.display = 'block';
+
+            } catch (error) {
+                log(`Failed to load PDF: ${error.message}`, 'error');
+                console.error(error);
+                loadBtn.disabled = false;
+            }
+        });
+
+        // Process first page only (test mode)
+        processBtn.addEventListener('click', async () => {
+            if (!processor) return;
+
+            log('Processing FIRST PAGE ONLY (test mode)...', 'info');
+            processBtn.disabled = true;
+            document.getElementById('status-text').textContent = 'Processing...';
+
+            try {
+                await processor.processPage(1);
+                log('✓ First page processed successfully!', 'success');
+                log('Check the transcription preview above for results.');
+                document.getElementById('status-text').textContent = 'Completed (1 page)';
+            } catch (error) {
+                log(`Failed to process page: ${error.message}`, 'error');
+                console.error(error);
+            } finally {
+                processBtn.disabled = false;
+            }
+        });
+
+        // Process all pages
+        processAllBtn.addEventListener('click', async () => {
+            if (!processor) return;
+
+            const confirmed = confirm(`This will process ALL pages. Continue?`);
+            if (!confirmed) return;
+
+            log('Processing ALL PAGES...', 'info');
+            processAllBtn.disabled = true;
+            processBtn.disabled = true;
+            document.getElementById('status-text').textContent = 'Processing all pages...';
+
+            try {
+                const results = await processor.processAll();
+                log(`✓✓✓ ALL PAGES PROCESSED! Total: ${results.length} pages`, 'success');
+                document.getElementById('status-text').textContent = `Completed (${results.length} pages)`;
+
+                // TODO: Download Markdown file
+                log('Next: Implement Markdown download feature');
+            } catch (error) {
+                log(`Failed to process all pages: ${error.message}`, 'error');
+                console.error(error);
+            } finally {
+                processAllBtn.disabled = false;
+                processBtn.disabled = false;
+            }
+        });
+
+        // Clear log
+        clearLogBtn.addEventListener('click', () => {
+            logDiv.innerHTML = '<div class="log-entry">Log cleared.</div>';
+        });
+
+        log('Test page loaded. PDF.js version: ' + (typeof pdfjsLib !== 'undefined' ? pdfjsLib.version : 'not loaded'));
+    </script>
+</body>
+</html>
