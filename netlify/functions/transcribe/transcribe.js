@@ -34,6 +34,15 @@ exports.handler = async (event, context) => {
     console.log('Calling Claude API with image size:', image.length, 'bytes');
     console.log('Prompt length:', prompt.length, 'characters');
 
+    // Detect actual image format from base64 header
+    // PNG starts with: iVBORw0KGgo
+    // JPEG starts with: /9j/
+    const isPNG = image.startsWith('iVBORw0KGgo');
+    const isJPEG = image.startsWith('/9j/');
+    const media_type = isPNG ? 'image/png' : (isJPEG ? 'image/jpeg' : 'image/png');
+
+    console.log('Detected image format:', media_type);
+
     // Call Claude API with timeout handling
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 25000); // 25s timeout (max 26s on free tier)
@@ -56,7 +65,7 @@ exports.handler = async (event, context) => {
                 type: 'image',
                 source: {
                   type: 'base64',
-                  media_type: 'image/png',
+                  media_type: media_type,
                   data: image
                 }
               },
